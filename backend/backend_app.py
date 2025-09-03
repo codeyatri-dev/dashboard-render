@@ -184,16 +184,21 @@ def login_info():
 # Google Calendar API
 # ------------------------------
 SCOPES = ['https://www.googleapis.com/auth/calendar']
-SERVICE_ACCOUNT_FILE = 'abstract-banner-469311-p3-1aed959a2771.json'
+
 
 service = None
 calendar_id = None
 try:
-    credentials = service_account.Credentials.from_service_account_file(
-        SERVICE_ACCOUNT_FILE, scopes=SCOPES
-    )
-    service = build('calendar', 'v3', credentials=credentials)
-    calendar_id = '5136fbf93c8a9abaa3882cdab4ec0e318f3ba5787d8818bcd91e4e667d7fd321@group.calendar.google.com'
+    if "GOOGLE_CREDENTIALS_JSON" in os.environ:
+        creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS_JSON"])
+        credentials = service_account.Credentials.from_service_account_info(
+            creds_info, scopes=SCOPES
+        )
+        service = build('calendar', 'v3', credentials=credentials)
+        # Put your calendarId in an environment variable too (best practice)
+        calendar_id = os.getenv("GOOGLE_CALENDAR_ID", "YOUR_DEFAULT_CALENDAR_ID")
+    else:
+        print("Warning: GOOGLE_CREDENTIALS_JSON not found in environment variables")
 except Exception as e:
     print(f"Warning: Google Calendar service not initialized: {e}")
 
