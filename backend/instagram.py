@@ -41,7 +41,7 @@ async def get_exact_followers(url: str) -> str:
 
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu","--single-process"])
             context = await browser.new_context(storage_state=SESSION_FILE)
             page = await context.new_page()
             await page.goto(url)
@@ -94,3 +94,4 @@ def run_coro(coro):
                 loop.close()
             except:
                 pass
+
