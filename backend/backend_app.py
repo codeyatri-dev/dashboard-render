@@ -101,45 +101,71 @@ def visitor_stats():
 # ------------------------------
 # Instagram API
 # ------------------------------
+# ------------------------------
+# Followers API
+# ------------------------------
 @app.route("/api/followers", methods=["GET"])
 def fetch_followers():
-    now = datetime.now()
-    use_exact = (now - instagram.last_exact_fetch).total_seconds() >= instagram.EXACT_FETCH_INTERVAL_HOURS * 3600
-    url = instagram.PROFILE_URLS[0]
-    username = urlparse(url).path.strip("/").split("/")[0]
-    count = instagram.run_coro(instagram.get_exact_followers(url) if use_exact else instagram.get_public_followers(url))
-    if use_exact:
-        instagram.last_exact_fetch = now
-    count_int = 0
     try:
-        count_int = int(str(count).replace(",", "")) if count else 0
-    except:
-        pass
-    instagram.save_follower_history(username, count_int)
-    return str(count_int), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        now = datetime.utcnow()
+        use_exact = (now - instagram.last_exact_fetch).total_seconds() >= instagram.EXACT_FETCH_INTERVAL_HOURS * 3600
+        url = instagram.PROFILE_URLS[0]
+        username = urlparse(url).path.strip("/").split("/")[0]
 
+        # Run async Playwright safely
+        count = instagram.run_coro(instagram.get_exact_followers(url) if use_exact else instagram.get_public_followers(url))
+        if use_exact:
+            instagram.last_exact_fetch = now
+
+        # Convert to int safely
+        try:
+            count_int = int(str(count).replace(",", "")) if count else 0
+        except Exception:
+            count_int = 0
+
+        # Save to history
+        instagram.save_follower_history(username, count_int)
+
+        return str(count_int), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ------------------------------
+# Followers history
+# ------------------------------
 @app.route("/api/followers/history", methods=["GET"])
 def fetch_follower_history():
-    if not os.path.exists(instagram.HISTORY_FILE):
-        return {}
-    with open(instagram.HISTORY_FILE, 'r') as f:
-        return json.load(f)
+    if not instagram.HISTORY_FILE or not os.path.exists(instagram.HISTORY_FILE):
+        return jsonify({})
+    try:
+        with open(instagram.HISTORY_FILE, 'r') as f:
+            return jsonify(json.load(f))
+    except Exception:
+        return jsonify({})
 
+# ------------------------------
+# Followers by username
+# ------------------------------
 @app.route("/api/followers/<username>", methods=["GET"])
 def get_profile_followers(username):
-    now = datetime.now()
-    url = f"https://www.instagram.com/{username}/"
-    use_exact = (now - instagram.last_exact_fetch).total_seconds() >= instagram.EXACT_FETCH_INTERVAL_HOURS * 3600
-    count = instagram.run_coro(instagram.get_exact_followers(url) if use_exact else instagram.get_public_followers(url))
-    if use_exact:
-        instagram.last_exact_fetch = now
-    count_int = 0
     try:
-        count_int = int(str(count).replace(",", "")) if count else 0
-    except:
-        pass
-    instagram.save_follower_history(username, count_int)
-    return str(count_int), 200, {"Content-Type": "text/plain; charset=utf-8"}
+        now = datetime.utcnow()
+        url = f"https://www.instagram.com/{username}/"
+        use_exact = (now - instagram.last_exact_fetch).total_seconds() >= instagram.EXACT_FETCH_INTERVAL_HOURS * 3600
+
+        count = instagram.run_coro(instagram.get_exact_followers(url) if use_exact else instagram.get_public_followers(url))
+        if use_exact:
+            instagram.last_exact_fetch = now
+
+        try:
+            count_int = int(str(count).replace(",", "")) if count else 0
+        except Exception:
+            count_int = 0
+
+        instagram.save_follower_history(username, count_int)
+        return str(count_int), 200, {"Content-Type": "text/plain; charset=utf-8"}
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # ------------------------------
 # Login API
