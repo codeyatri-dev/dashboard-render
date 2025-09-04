@@ -303,7 +303,7 @@ const CodeyatriDashboard = ({ onLogout }) => {
   useEffect(() => {
     async function fetchWebsiteVisitors() {
       try {
-        const res = await fetch("https://dashboard-render-3.onrender.com/api/visitors");
+        const res = await fetch("https://dashboard-tihz.onrender.com/api/visitors");
         const data = await res.json();
         // Expecting: { total: number, weekly: number }
         if (typeof data.total === "number") {
@@ -768,7 +768,7 @@ const App = () => {
   const handleLogin = async (username, password) => {
     setAuthLoading(true);
     try {
-      const res = await fetch("https://dashboard-render-3.onrender.com/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
+      const res = await fetch("https://dashboard-tihz.onrender.com/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
       const data = await res.json().catch(() => ({}));
       if (res.ok && (data.success === true || data.authenticated === true)) setAuth({ loggedIn: true, user: data.user || username, token: data.token || null });
       else alert(data.message || data.error || "Invalid credentials");
@@ -784,4 +784,5 @@ const App = () => {
 };
 
 export default App;
+
 
