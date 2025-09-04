@@ -1,4 +1,13 @@
 # backend_app.py
+# ------------------------------
+# Eventlet monkey-patching (VERY FIRST)
+# ------------------------------
+import eventlet
+eventlet.monkey_patch()
+
+# ------------------------------
+# Standard imports
+# ------------------------------
 from flask import Flask, jsonify, request, g
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -8,7 +17,6 @@ from datetime import datetime, timedelta, timezone
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import instagram
-
 print(f"Instagram module loaded: {hasattr(instagram, 'get_exact_followers')}, PROFILE_URLS={getattr(instagram, 'PROFILE_URLS', None)}")
 
 # ------------------------------
@@ -16,9 +24,9 @@ print(f"Instagram module loaded: {hasattr(instagram, 'get_exact_followers')}, PR
 # ------------------------------
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
-# Use eventlet for production-friendly SocketIO
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+
+
 
 # ------------------------------
 # SQLite Visitor DB Setup
@@ -163,23 +171,32 @@ SERVICE_ACCOUNT_FILE = 'abstract-banner-469311-p3-1aed959a2771.json'
 service = None
 calendar_id = None
 try:
-    credentials = service_account.Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES
+    )
     service = build('calendar', 'v3', credentials=credentials)
-    calendar_id = os.environ.get("GOOGLE_CALENDAR_ID", calendar_id)
+    # Use env variable if set, else fallback to 'primary'
+    calendar_id = os.environ.get("GOOGLE_CALENDAR_ID", "primary")
 except Exception as e:
     print(f"Warning: Google Calendar service not initialized: {e}")
 
 @app.route('/events', methods=['GET'])
 def get_events():
-    if service is None:
+    if service is None or calendar_id is None:
         return jsonify({'error': 'Google Calendar service not configured'}), 500
     now = datetime.now(timezone.utc).isoformat()
-    events_result = service.events().list(calendarId=calendar_id, timeMin=now, maxResults=20, singleEvents=True, orderBy='startTime').execute()
+    events_result = service.events().list(
+        calendarId=calendar_id,
+        timeMin=now,
+        maxResults=20,
+        singleEvents=True,
+        orderBy='startTime'
+    ).execute()
     return jsonify(events_result.get('items', []))
 
 @app.route('/events', methods=['POST'])
 def add_event():
-    if service is None:
+    if service is None or calendar_id is None:
         return jsonify({'error': 'Google Calendar service not configured'}), 500
     event_data = request.get_json(force=True)
     event = service.events().insert(calendarId=calendar_id, body=event_data).execute()
