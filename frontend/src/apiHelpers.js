@@ -20,7 +20,7 @@
 
 export async function fetchInstagramFollowers() {
   try {
-    const res = await fetch("http://127.0.0.1:8000/api/followers");
+    const res = await fetch("https://dashboard-tihz.onrender.com/api/followers");
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     console.log("API raw response (apiHelpers):", data, typeof data);
@@ -37,4 +37,5 @@ export async function fetchInstagramFollowers() {
     console.error("fetchInstagramFollowers error:", err);
     return 0;
   }
+
 }
