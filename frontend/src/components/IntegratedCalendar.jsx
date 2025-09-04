@@ -32,7 +32,7 @@ function IntegratedCalendar() {
 
   // -- Load events from backend
   const loadEvents = () => {
-    fetch("https://dashboard-render-3.onrender.com/events")
+    fetch("https://dashboard-tihz.onrender.com/events")
       .then((res) => res.json())
       .then((data) => {
         const googleEvents = (Array.isArray(data) ? data : []).map((e) => ({
@@ -147,7 +147,7 @@ function IntegratedCalendar() {
     };
 
     try {
-      const res = await fetch("https://dashboard-render-3.onrender.com/events", {
+      const res = await fetch("https://dashboard-tihz.onrender.com/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -192,7 +192,7 @@ function IntegratedCalendar() {
 
     try {
       const res = await fetch(
-        `https://dashboard-render-3.onrender.com/events/${editingEvent.id}`,
+        `https://dashboard-tihz.onrender.com/events/${editingEvent.id}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -230,7 +230,7 @@ function IntegratedCalendar() {
 
   const deleteEvent = async (ev) => {
     try {
-      const res = await fetch(`https://dashboard-render-3.onrender.com/events/${ev.id}`, {
+      const res = await fetch(`https://dashboard-tihz.onrender.com/events/${ev.id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -405,4 +405,5 @@ function IntegratedCalendar() {
 }
 
 export default IntegratedCalendar;
+
 
