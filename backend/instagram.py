@@ -4,32 +4,46 @@ import os
 import json
 from playwright.async_api import async_playwright
 
-# Instagram Config
+# ------------------------------
+# Config
+# ------------------------------
+BASE_DIR = os.path.dirname(__file__)
 PROFILE_URLS = ["https://www.instagram.com/code.yatri/"]
-SESSION_FILE = "instagram_session.json"
-HISTORY_FILE = "followers_history.json"
+SESSION_FILE = os.path.join(BASE_DIR, "instagram_session.json")
+HISTORY_FILE = os.path.join(BASE_DIR, "followers_history.json")
 EXACT_FETCH_INTERVAL_HOURS = 24
 last_exact_fetch = datetime.datetime.min
 
+# Common Chromium args for container environments
+CHROMIUM_ARGS = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-dev-shm-usage",
+    "--disable-gpu",
+    "--single-process",
+    "--disable-extensions",
+]
 
+# ------------------------------
+# Instagram Scraping
+# ------------------------------
 async def get_public_followers(url: str) -> str:
     """Safe public scraping (approximate)."""
     try:
         async with async_playwright() as p:
-            # Add common sandbox args (helpful in CI/WSL/Docker environments)
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"])
+            browser = await p.chromium.launch(headless=True, args=CHROMIUM_ARGS)
             page = await browser.new_page()
             await page.goto(url)
-            await asyncio.sleep(2)
+            await asyncio.sleep(3)  # Give page time to load
 
             meta = await page.locator('meta[name="description"]').get_attribute('content')
-            if meta and "Followers" in meta:
-                followers_text = meta.split(" Followers")[0].split(",")[-1].strip()
-            else:
-                followers_text = "Not Found"
-
             await browser.close()
-            return followers_text
+
+            if meta and "Followers" in meta:
+                # Extract number of followers from meta description
+                followers_text = meta.split(" Followers")[0].split(",")[-1].strip()
+                return followers_text
+            return "0"
     except Exception as e:
         return f"Error: {str(e)}"
 
@@ -41,11 +55,11 @@ async def get_exact_followers(url: str) -> str:
 
     try:
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True, args=["--no-sandbox", "--disable-setuid-sandbox","--disable-dev-shm-usage","--disable-gpu","--single-process"])
+            browser = await p.chromium.launch(headless=True, args=CHROMIUM_ARGS)
             context = await browser.new_context(storage_state=SESSION_FILE)
             page = await context.new_page()
             await page.goto(url)
-            await page.wait_for_selector('[aria-label$="followers"]', timeout=10000)
+            await page.wait_for_selector('[aria-label$="followers"]', timeout=20000)
 
             followers = await page.evaluate("""() => {
                 try {
@@ -56,15 +70,13 @@ async def get_exact_followers(url: str) -> str:
                 return null;
             }""")
             await browser.close()
-
-            if followers:
-                return followers
-            else:
-                return await get_public_followers(url)
+            return followers if followers else await get_public_followers(url)
     except Exception:
         return await get_public_followers(url)
 
-
+# ------------------------------
+# Save follower history
+# ------------------------------
 def save_follower_history(username: str, count: int):
     today = datetime.date.today().isoformat()
     history = {}
@@ -80,8 +92,9 @@ def save_follower_history(username: str, count: int):
     with open(HISTORY_FILE, 'w') as f:
         json.dump(history, f, indent=2)
 
-
-# Helper to run Playwright async coroutines from sync Flask routes without interfering with any running loop
+# ------------------------------
+# Helper to run async coroutines from Flask sync routes
+# ------------------------------
 def run_coro(coro):
     loop = None
     try:
@@ -94,4 +107,3 @@ def run_coro(coro):
                 loop.close()
             except:
                 pass
-
